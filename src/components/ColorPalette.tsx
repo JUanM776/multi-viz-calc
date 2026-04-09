@@ -25,7 +25,7 @@ export const ColorPalette = ({ value, onChange }: ColorPaletteProps) => {
             key={p.id}
             onClick={() => onChange(p.id)}
             title={p.label}
-            className={`group relative flex-1 h-7 rounded-md overflow-hidden transition-all duration-200 ${
+            className={`group relative flex-1 h-8 rounded-md overflow-hidden transition-all duration-200 ${
               value === p.id
                 ? "ring-2 ring-primary ring-offset-1 ring-offset-background scale-105"
                 : "opacity-60 hover:opacity-90 hover:scale-[1.02]"

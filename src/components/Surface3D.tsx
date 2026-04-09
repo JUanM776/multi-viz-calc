@@ -2,13 +2,15 @@ import { useRef, useMemo, useState, Component, type ReactNode } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Grid, Text, Line } from "@react-three/drei";
 import * as THREE from "three";
-import { evaluate } from "mathjs";
+import { evaluate, compile } from "mathjs";
 import type { PaletteId } from "./ColorPalette";
+import type { TangentPlaneResult } from "@/utils/mathCalculations";
 import { Loader2, AlertTriangle, HelpCircle } from "lucide-react";
 
 interface Surface3DProps {
   functionString: string;
   palette?: PaletteId;
+  tangentPlane?: TangentPlaneResult | null;
 }
 
 // --- Palette ---
@@ -147,6 +149,15 @@ const SurfaceMesh = ({
     let zMin = Infinity;
     let zMax = -Infinity;
 
+    // Compile once, evaluate many times — much faster than evaluate()
+    let compiledFn: { evaluate: (scope: Record<string, number>) => any } | null = null;
+    try {
+      const result = compile(functionString);
+      compiledFn = Array.isArray(result) ? result[0] : result;
+    } catch {
+      return geo;
+    }
+
     for (let i = 0; i <= resolution; i++) {
       zValues[i] = [];
       for (let j = 0; j <= resolution; j++) {
@@ -154,7 +165,7 @@ const SurfaceMesh = ({
         const y = (j / resolution - 0.5) * size;
         let z: number | null = null;
         try {
-          const result = evaluate(functionString, { x, y });
+          const result = compiledFn!.evaluate({ x, y });
           const num = typeof result === "number" ? result : Number(result);
           if (isFinite(num)) {
             z = Math.max(-10, Math.min(10, num));
@@ -210,15 +221,68 @@ const SurfaceMesh = ({
   );
 };
 
+// --- Tangent plane mesh ---
+
+const TangentPlaneMesh = ({ tp }: { tp: TangentPlaneResult }) => {
+  const geometry = useMemo(() => {
+    const size = 3;
+    const geo = new THREE.BufferGeometry();
+    const { fx, fy, fz, dfdx, dfdy } = tp;
+
+    // 4 corners of the tangent plane
+    const corners = [
+      [-size, -size],
+      [size, -size],
+      [size, size],
+      [-size, size],
+    ].map(([dx, dy]) => {
+      const x = fx + dx;
+      const y = fy + dy;
+      const z = fz + dfdx * dx + dfdy * dy;
+      return [x, Math.max(-10, Math.min(10, z)), y] as [number, number, number];
+    });
+
+    const positions = new Float32Array([
+      ...corners[0], ...corners[1], ...corners[2],
+      ...corners[0], ...corners[2], ...corners[3],
+    ]);
+
+    geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    geo.computeVertexNormals();
+    return geo;
+  }, [tp]);
+
+  return (
+    <group>
+      <mesh geometry={geometry}>
+        <meshStandardMaterial
+          color="#f59e0b"
+          transparent
+          opacity={0.35}
+          side={THREE.DoubleSide}
+          depthWrite={false}
+        />
+      </mesh>
+      {/* Point marker */}
+      <mesh position={[tp.fx, tp.fz, tp.fy]}>
+        <sphereGeometry args={[0.12, 16, 16]} />
+        <meshStandardMaterial color="#ef4444" emissive="#ef4444" emissiveIntensity={0.5} />
+      </mesh>
+    </group>
+  );
+};
+
 // --- Main ---
 
-export const Surface3D = ({ functionString, palette = "ocean" }: Surface3DProps) => {
+export const Surface3D = ({ functionString, palette = "ocean", tangentPlane }: Surface3DProps) => {
   const [loading, setLoading] = useState(true);
 
   const isValid = useMemo(() => {
     try {
-      const result = evaluate(functionString, { x: 1, y: 1 });
-      return typeof result === "number" || typeof result === "object";
+      const result = compile(functionString);
+      const fn = Array.isArray(result) ? result[0] : result;
+      fn.evaluate({ x: 1, y: 1 });
+      return true;
     } catch {
       return false;
     }
@@ -305,6 +369,7 @@ export const Surface3D = ({ functionString, palette = "ocean" }: Surface3DProps)
           <pointLight position={[0, 8, 0]} intensity={0.3} color="#6366f1" />
 
           <SurfaceMesh functionString={functionString} palette={palette} />
+          {tangentPlane && <TangentPlaneMesh tp={tangentPlane} />}
           <Axes />
 
           <Grid
