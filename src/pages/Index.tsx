@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { FunctionInput } from "@/components/FunctionInput";
 import { Surface3D } from "@/components/Surface3D";
 import { SolutionSteps } from "@/components/SolutionSteps";
@@ -6,18 +6,23 @@ import { calculateMathProperties, generateSolutionSteps } from "@/utils/mathCalc
 import { Separator } from "@/components/ui/separator";
 import { Calculator } from "lucide-react";
 
+const DEFAULT_FUNCTION = "x^2 + y^2";
+
 const Index = () => {
-  const [currentFunction, setCurrentFunction] = useState("x^2 + y^2");
+  const [currentFunction, setCurrentFunction] = useState(DEFAULT_FUNCTION);
   const [solutionSteps, setSolutionSteps] = useState<any[]>([]);
 
-  const handleFunctionSubmit = (func: string) => {
+  const handleFunctionSubmit = useCallback((func: string) => {
     setCurrentFunction(func);
-    
-    // Calculate mathematical properties
     const results = calculateMathProperties(func);
     const steps = generateSolutionSteps(func, results);
     setSolutionSteps(steps);
-  };
+  }, []);
+
+  // Calculate on initial load
+  useEffect(() => {
+    handleFunctionSubmit(DEFAULT_FUNCTION);
+  }, [handleFunctionSubmit]);
 
   return (
     <div className="min-h-screen bg-background">
