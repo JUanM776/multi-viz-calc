@@ -35,7 +35,7 @@ export const SolutionSteps = ({ steps }: SolutionStepsProps) => {
         </div>
       </div>
 
-      <div className="p-2">
+      <div className="p-2 max-h-[420px] overflow-y-auto">
         {steps.map((step, index) => (
           <div
             key={index}

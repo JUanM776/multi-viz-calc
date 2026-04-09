@@ -4,7 +4,7 @@ import { OrbitControls, Grid, Text, Line } from "@react-three/drei";
 import * as THREE from "three";
 import { evaluate } from "mathjs";
 import type { PaletteId } from "./ColorPalette";
-import { Loader2, AlertTriangle } from "lucide-react";
+import { Loader2, AlertTriangle, HelpCircle } from "lucide-react";
 
 interface Surface3DProps {
   functionString: string;
@@ -277,6 +277,16 @@ export const Surface3D = ({ functionString, palette = "ocean" }: Surface3DProps)
             </span>
             <span className="flex items-center gap-1 text-[9px] font-mono">
               <span className="w-2 h-0.5 rounded-full bg-[#10b981]" /> Z
+            </span>
+          </div>
+        </div>
+
+        {/* Controls hint — visible on hover */}
+        <div className="absolute bottom-3 left-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <div className="flex items-center gap-2 bg-background/60 backdrop-blur-md rounded-lg px-2.5 py-1.5 border border-border/30 shadow-sm">
+            <HelpCircle className="h-3 w-3 text-muted-foreground/50 shrink-0" />
+            <span className="text-[9px] text-muted-foreground/70">
+              Izq: rotar · Der: mover · Scroll: zoom
             </span>
           </div>
         </div>
